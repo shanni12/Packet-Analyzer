@@ -1,5 +1,7 @@
 import struct
 import socket
+import textwrap
+DATA_TAB_3='\t\t\t'
 #f=open("filemac.txt","w")
 def main():
     conn=socket.socket(socket.AF_PACKET,socket.SOCK_RAW,socket.ntohs(3))
@@ -13,8 +15,9 @@ def main():
         #print(data)
         data1=ip(data)
         if(data1):
-           tcp(data1)
+           data1=tcp(data1)
            print('destination_mac:{},src_mac:{},{},'.format(dest_mac,src_mac,'\n'))
+           print(format_multi_line(DATA_TAB_3,data))
 def tcp(data):
     #print(data[0:2])
     port_no=struct.unpack(' 2s ',data[0:2])
@@ -24,11 +27,14 @@ def tcp(data):
     
     print('src_port:',''.join(map(str,src_port_no)))
     print('dest_port:',''.join(map(str,des_port_no)))
+    Data_offset=(bin(data[12])[2:].zfill(8))[:4]
+    Data_offset=int(Data_offset,2)
+    return Data_offset*4
 
 def ip(data):
     #version=struct.unpack('B',data[0:1])
     #print(''.join(map(str,version)))
-    if((bin(data[0])[2:].zfill(8))[:4]=='0100'):
+    if((bin(data[0])[2:].zfill(8))[:4]=='0100' and bin(data[9])[2:].zfill(8)=='00000110'):
        ihl=int(bin(data[0])[2:].zfill(8)[4:],2)
        #print(ihl)
        dest_ip=struct.unpack(' 4s ',data[12:16])
@@ -54,4 +60,12 @@ def get_mac_addr(bytes_addr):
     bytes_str=map('{:02x}'.format,bytes_addr)
     #print(type(bytes_str))
     return ':'.join(bytes_str).upper()
+def format_multi_line(prefix,string,size=80):
+    size-=len(prefix)
+    if isinstance(string,bytes):
+        string=''.join(r'\x{:02x}'.format(byte) for byte in string)
+        if size%2:
+           size-=1
+    return '\n'.join([prefix+line for line in textwrap.wrap(string,size)])
+
 main()
